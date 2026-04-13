@@ -95,7 +95,6 @@
     }
     .muted{color:var(--muted)}
     .hidden{display:none !important}
-    .right{text-align:right}
     .notice{
       padding:12px 14px;
       background:#eff6ff;
@@ -105,11 +104,16 @@
       font-size:13px;
       margin-bottom:12px;
     }
+    .notice.warn{
+      background:#fff7ed;
+      border-color:#fdba74;
+      color:#9a3412;
+    }
     .footer-note{font-size:12px;color:var(--muted);margin-top:8px}
     .pill{padding:4px 8px;border-radius:999px;background:#eff6ff;color:#1e40af;font-size:12px;font-weight:600}
     .w-100{width:100%}
 
-    @media (max-width: 1100px){
+    @media (max-width:1100px){
       .grid-3,.grid-2,.stats{grid-template-columns:1fr}
     }
   </style>
@@ -121,7 +125,11 @@
 </header>
 
 <div class="wrap">
-   <div class="stats card">
+  <div id="statusBox" class="notice">
+    Dashboard terhubung ke Google Sheets dan Google Apps Script.
+  </div>
+
+  <div class="stats card">
     <div class="stat">
       <div class="muted">Total Data Tampil</div>
       <div class="n" id="sTotal">0</div>
@@ -290,7 +298,6 @@
 </div>
 
 <script>
-/* ========================= KONFIGURASI ========================= */
 const API_URL = "https://script.google.com/macros/s/AKfycby5aVCyiHby_W7TV78s13shAjgFR9V4D3pKf5FxtmOY1cO7NEuuzN0Jt9B_CIQdb4vH/exec";
 
 const WILAYAH_FIXED = [
@@ -311,7 +318,11 @@ const DEFAULT_KEYWORDS = [
   "Air Upas","Entikong","Bandara Supadio","perbatasan Malaysia","Sambas","Singkawang","Pontianak","Kubu Raya","Ketapang"
 ];
 
-const CORS_PROXY = "https://api.allorigins.win/raw?url=";
+const CORS_PROXIES = [
+  url => `https://api.allorigins.win/raw?url=${encodeURIComponent(url)}`,
+  url => `https://r.jina.ai/http://${url.replace(/^https?:\/\//,'')}`
+];
+
 const WILAYAH_ALL = new Set(WILAYAH_FIXED);
 
 let DATA_RSS = [];
@@ -319,9 +330,13 @@ let DATA_MANUAL = [];
 let barChart, pieChart;
 let state = { wilayah:"", kategori:"", platform:"", verifikasi:"", query:"" };
 
-/* ========================= UTIL ========================= */
 const qs = s => document.querySelector(s);
-const qsa = s => Array.from(document.querySelectorAll(s));
+
+function setStatus(msg, warn=false){
+  const box = qs("#statusBox");
+  box.textContent = msg;
+  box.className = warn ? "notice warn" : "notice";
+}
 
 function nowDateISO(){
   const d = new Date();
@@ -421,30 +436,41 @@ function setLoading(btn, loading, textDefault = null){
   }
 }
 
-/* ========================= API ========================= */
 async function apiGet(action){
-  const res = await fetch(`${API_URL}?action=${encodeURIComponent(action)}`, { cache: 'no-store' });
+  const res = await fetch(`${API_URL}?action=${encodeURIComponent(action)}`, { cache:'no-store' });
   return await res.json();
 }
 
 async function apiPost(action, payload){
   const res = await fetch(API_URL, {
-    method: 'POST',
-    headers: { 'Content-Type': 'text/plain;charset=utf-8' },
+    method:'POST',
+    headers:{ 'Content-Type':'text/plain;charset=utf-8' },
     body: JSON.stringify({ action, payload })
   });
   return await res.json();
 }
 
-/* ========================= RSS ========================= */
 async function fetchText(url){
   try{
     const r = await fetch(url, { cache:'no-store' });
-    if(r.ok) return await r.text();
+    if(r.ok){
+      const txt = await r.text();
+      if(txt && txt.length > 50) return txt;
+    }
   }catch(e){}
-  const r2 = await fetch(CORS_PROXY + encodeURIComponent(url), { cache:'no-store' });
-  if(!r2.ok) throw new Error('Proxy gagal');
-  return await r2.text();
+
+  for(const makeProxy of CORS_PROXIES){
+    try{
+      const proxied = makeProxy(url);
+      const r = await fetch(proxied, { cache:'no-store' });
+      if(r.ok){
+        const txt = await r.text();
+        if(txt && txt.length > 50) return txt;
+      }
+    }catch(e){}
+  }
+
+  throw new Error("Gagal mengambil RSS");
 }
 
 function parseRSS(xmlStr){
@@ -468,27 +494,36 @@ function parseRSS(xmlStr){
 }
 
 async function crawlFeeds(feeds, keywords){
- async function crawlFeeds(feeds, keywords){
   const out = [];
+  let feedOk = 0;
 
   for (const src of feeds) {
     try {
       const txt = await fetchText(src);
       const entries = parseRSS(txt);
-
-      console.log("Feed:", src, "Jumlah entri:", entries.length);
+      if(entries.length) feedOk++;
 
       for (const it of entries) {
-        const blob = `${it.title} ${it.desc}`.trim();
+        const blob = `${it.title || ''} ${it.desc || ''}`.trim();
+
+        const matched =
+          containsAny(blob, keywords) ||
+          blob.toLowerCase().includes("kalbar") ||
+          blob.toLowerCase().includes("pontianak") ||
+          blob.toLowerCase().includes("sambas") ||
+          blob.toLowerCase().includes("singkawang");
+
+        if(!matched) continue;
+
         const wilayah = detectWilayah(blob);
         WILAYAH_ALL.add(wilayah);
 
         out.push({
-          id: `rss-${btoa((it.link || it.title).slice(0, 40)).replace(/=/g, '')}`,
+          id: `rss-${btoa((it.link || it.title || Math.random().toString()).slice(0, 40)).replace(/=/g, '')}`,
           Tanggal: nowDateISO(),
           Wilayah: wilayah,
           Kategori: kategoriHeuristik(blob),
-          Peristiwa: it.title,
+          Peristiwa: it.title || '',
           Akun: 'RSS Media',
           'Barang Bukti': '—',
           Tersangka: '—',
@@ -507,11 +542,17 @@ async function crawlFeeds(feeds, keywords){
     }
   }
 
-  console.log("Total RSS masuk:", out.length);
+  if(feedOk === 0){
+    setStatus("RSS belum berhasil diambil. Coba klik 'Muat Ulang RSS' atau cek akses feed/proxy.", true);
+  }else if(out.length === 0){
+    setStatus("Feed berhasil dibaca, tetapi belum ada item yang cocok dengan filter kata kunci.", true);
+  }else{
+    setStatus(`RSS aktif. ${out.length} item berhasil dimuat dari ${feedOk} feed.`, false);
+  }
+
   return out;
 }
 
-/* ========================= LOAD DATA ========================= */
 async function loadFeedsFromAPI(){
   const res = await apiGet('getFeeds');
   const feeds = (res.ok && Array.isArray(res.data) && res.data.length) ? res.data : DEFAULT_FEEDS;
@@ -583,7 +624,6 @@ async function loadManualFromAPI(){
   }
 }
 
-/* ========================= FILTER & RENDER ========================= */
 function getAllData(){ return [...DATA_RSS, ...DATA_MANUAL]; }
 
 function filtered(){
@@ -688,7 +728,6 @@ function render(){
   renderCharts(rows);
 }
 
-/* ========================= FORM ========================= */
 function resetForm(){
   qs('#mId').value = '';
   qs('#mTanggal').value = nowDateISO();
@@ -800,7 +839,6 @@ async function clearManualDataAPI(){
   }
 }
 
-/* ========================= INIT ========================= */
 async function init(){
   const sel = qs('#fWilayah');
   const selM = qs('#mWilayah');
@@ -818,15 +856,20 @@ async function init(){
   });
 
   resetForm();
+  setStatus("Memuat data dashboard...");
 
-  const feeds = await loadFeedsFromAPI();
-  const keywords = await loadKeywordsFromAPI();
-  await loadManualFromAPI();
-  DATA_RSS = await crawlFeeds(feeds, keywords);
-  render();
+  try{
+    const feeds = await loadFeedsFromAPI();
+    const keywords = await loadKeywordsFromAPI();
+    await loadManualFromAPI();
+    DATA_RSS = await crawlFeeds(feeds, keywords);
+    render();
+  }catch(err){
+    console.error(err);
+    setStatus("Terjadi kendala saat memuat dashboard. Cek Apps Script atau feed RSS.", true);
+  }
 }
 
-/* ========================= EVENTS ========================= */
 qs('#btnSaveFeeds').onclick = saveFeedsToAPI;
 qs('#btnSaveKeywords').onclick = saveKeywordsToAPI;
 qs('#btnTambah').onclick = saveManualRow;
@@ -837,15 +880,16 @@ qs('#btnReloadRSS').onclick = async function(){
   const btn = this;
   try{
     setLoading(btn, true);
+    setStatus("Memuat ulang RSS...");
     const feeds = await loadFeedsFromAPI();
     const keywords = await loadKeywordsFromAPI();
     DATA_RSS = [];
     render();
     DATA_RSS = await crawlFeeds(feeds, keywords);
     render();
-    alert('RSS berhasil dimuat ulang.');
   }catch(err){
     alert(err.message || 'Gagal muat ulang RSS');
+    setStatus("Gagal memuat ulang RSS.", true);
   }finally{
     setLoading(btn, false, 'Muat Ulang RSS');
   }
