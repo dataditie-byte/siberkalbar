@@ -468,40 +468,46 @@ function parseRSS(xmlStr){
 }
 
 async function crawlFeeds(feeds, keywords){
+ async function crawlFeeds(feeds, keywords){
   const out = [];
-  for(const src of feeds){
-    try{
+
+  for (const src of feeds) {
+    try {
       const txt = await fetchText(src);
       const entries = parseRSS(txt);
-      for(const it of entries){
+
+      console.log("Feed:", src, "Jumlah entri:", entries.length);
+
+      for (const it of entries) {
         const blob = `${it.title} ${it.desc}`.trim();
-        if(containsAny(blob, keywords)){
-          const wilayah = detectWilayah(blob);
-          WILAYAH_ALL.add(wilayah);
-          out.push({
-            id: `rss-${btoa((it.link || it.title).slice(0, 40)).replace(/=/g,'')}`,
-            Tanggal: nowDateISO(),
-            Wilayah: wilayah,
-            Kategori: kategoriHeuristik(blob),
-            Peristiwa: it.title,
-            Akun: 'RSS Media',
-            'Barang Bukti': '—',
-            Tersangka: '—',
-            Platform: 'Berita',
-            Modus: '—',
-            Urgensi: 'Sedang',
-            Verifikasi: 'Belum Dicek',
-            Catatan: it.desc || '',
-            Petugas: 'Sistem',
-            Sumber: isValidUrl(it.link) ? it.link : '',
-            _editable: false
-          });
-        }
+        const wilayah = detectWilayah(blob);
+        WILAYAH_ALL.add(wilayah);
+
+        out.push({
+          id: `rss-${btoa((it.link || it.title).slice(0, 40)).replace(/=/g, '')}`,
+          Tanggal: nowDateISO(),
+          Wilayah: wilayah,
+          Kategori: kategoriHeuristik(blob),
+          Peristiwa: it.title,
+          Akun: 'RSS Media',
+          'Barang Bukti': '—',
+          Tersangka: '—',
+          Platform: 'Berita',
+          Modus: '—',
+          Urgensi: 'Sedang',
+          Verifikasi: 'Belum Dicek',
+          Catatan: it.desc || '',
+          Petugas: 'Sistem',
+          Sumber: isValidUrl(it.link) ? it.link : '',
+          _editable: false
+        });
       }
-    }catch(err){
+    } catch (err) {
       console.warn('Gagal feed', src, err);
     }
   }
+
+  console.log("Total RSS masuk:", out.length);
   return out;
 }
 
