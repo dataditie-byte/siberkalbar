@@ -1,0 +1,885 @@
+<!DOCTYPE html>
+<html lang="id">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Monitoring Siber Kalbar — GitHub + Google Sheets</title>
+  <script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.1"></script>
+  <style>
+    :root{api
+      --bg:#f6f8fb;
+      --card:#ffffff;
+      --line:#e5e7eb;
+      --ink:#0f172a;
+      --muted:#64748b;
+      --brand:#0b3b66;
+      --brand2:#0f766e;
+      --danger:#b91c1c;
+      --warn:#b45309;
+      --ok:#166534;
+      --blue:#075985;
+      --shadow:0 8px 24px rgba(15,23,42,.06);
+      --radius:16px;
+    }
+
+    *{box-sizing:border-box}
+    body{
+      margin:0;
+      font-family:system-ui,-apple-system,Segoe UI,Roboto,Ubuntu,Arial,sans-serif;
+      background:var(--bg);
+      color:var(--ink);
+    }
+    header{
+      background:linear-gradient(135deg,var(--brand),#111827);
+      color:#fff;
+      padding:18px 20px;
+    }
+    header h1{margin:0;font-size:22px;line-height:1.2}
+    header p{margin:6px 0 0;color:#dbeafe;font-size:13px}
+    .wrap{max-width:1280px;margin:0 auto;padding:18px}
+    .grid{display:grid;gap:16px}
+    .grid-3{grid-template-columns:2fr 1fr 1fr}
+    .grid-2{grid-template-columns:1fr 1fr}
+    .card{
+      background:var(--card);
+      border:1px solid #eef2f7;
+      border-radius:var(--radius);
+      box-shadow:var(--shadow);
+      padding:16px;
+    }
+    .section-title{font-size:15px;font-weight:700;margin:0 0 10px}
+    .sub{font-size:12px;color:var(--muted)}
+    .controls{display:flex;flex-wrap:wrap;gap:10px;margin-bottom:12px}
+    select,input,textarea,button{
+      font:inherit;
+      border:1px solid var(--line);
+      border-radius:12px;
+      padding:10px 12px;
+      background:#fff;
+    }
+    input,select,textarea{color:var(--ink)}
+    textarea{width:100%;resize:vertical}
+    button{cursor:pointer}
+    .primary{background:var(--brand);border-color:var(--brand);color:#fff}
+    .secondary{background:var(--brand2);border-color:var(--brand2);color:#fff}
+    .danger{background:var(--danger);border-color:var(--danger);color:#fff}
+    .ghost{background:#fff}
+    .stats{display:grid;grid-template-columns:repeat(4,1fr);gap:12px}
+    .stat{
+      padding:14px;
+      border-radius:14px;
+      background:#f8fafc;
+      border:1px solid #edf2f7;
+    }
+    .stat .n{font-size:26px;font-weight:800;margin-top:6px}
+    .badge{display:inline-block;padding:5px 10px;border-radius:999px;font-size:12px;font-weight:700}
+    .b-red{background:#fee2e2;color:#991b1b}
+    .b-blue{background:#e0f2fe;color:#075985}
+    .b-green{background:#dcfce7;color:#166534}
+    .b-amber{background:#fef3c7;color:#92400e}
+    .b-gray{background:#e5e7eb;color:#374151}
+    table{width:100%;border-collapse:collapse;font-size:14px}
+    th,td{padding:10px;border-bottom:1px solid #eef2f7;text-align:left;vertical-align:top}
+    th{background:#f8fafc;color:#475569;position:sticky;top:0}
+    .table-wrap{overflow:auto;max-height:70vh;border:1px solid #eef2f7;border-radius:14px}
+    .row-actions{display:flex;gap:6px;flex-wrap:wrap}
+    .btn-link{
+      display:inline-block;
+      text-decoration:none;
+      border:1px solid var(--line);
+      border-radius:10px;
+      padding:6px 10px;
+      color:var(--ink);
+      background:#fff;
+      white-space:nowrap;
+    }
+    .muted{color:var(--muted)}
+    .hidden{display:none !important}
+    .right{text-align:right}
+    .notice{
+      padding:12px 14px;
+      background:#eff6ff;
+      border:1px solid #bfdbfe;
+      color:#1d4ed8;
+      border-radius:12px;
+      font-size:13px;
+      margin-bottom:12px;
+    }
+    .footer-note{font-size:12px;color:var(--muted);margin-top:8px}
+    .pill{padding:4px 8px;border-radius:999px;background:#eff6ff;color:#1e40af;font-size:12px;font-weight:600}
+    .w-100{width:100%}
+
+    @media (max-width: 1100px){
+      .grid-3,.grid-2,.stats{grid-template-columns:1fr}
+    }
+  </style>
+</head>
+<body>
+<header>
+  <h1>Dashboard Monitoring Siber Kalbar</h1>
+  <p>Versi GitHub Pages + Google Sheets + Google Apps Script</p>
+</header>
+
+<div class="wrap">
+  <div class="notice">
+    Isi <b>API_URL</b> "https://script.google.com/macros/s/AKfycby5aVCyiHby_W7TV78s13shAjgFR9V4D3pKf5FxtmOY1cO7NEuuzN0Jt9B_CIQdb4vH/exec"
+  </div>
+
+  <div class="stats card">
+    <div class="stat">
+      <div class="muted">Total Data Tampil</div>
+      <div class="n" id="sTotal">0</div>
+    </div>
+    <div class="stat">
+      <div class="muted">Community Alert</div>
+      <div class="n" id="sAlert">0</div>
+    </div>
+    <div class="stat">
+      <div class="muted">Penegakan Hukum</div>
+      <div class="n" id="sHukum">0</div>
+    </div>
+    <div class="stat">
+      <div class="muted">Data Manual</div>
+      <div class="n" id="sManual">0</div>
+    </div>
+  </div>
+
+  <div class="grid grid-3" style="margin-top:16px;">
+    <div class="card">
+      <div class="section-title">Filter & Visualisasi</div>
+      <div class="controls">
+        <select id="fWilayah"><option value="">Semua Wilayah</option></select>
+        <select id="fKategori">
+          <option value="">Semua Kategori</option>
+          <option>Community Alert</option>
+          <option>Penegakan Hukum</option>
+          <option>Pemusnahan BB</option>
+          <option>Pencegahan/Edukasi</option>
+          <option>Kebijakan/Instruksi</option>
+          <option>Sentimen Publik Online</option>
+        </select>
+        <select id="fPlatform">
+          <option value="">Semua Platform</option>
+          <option>Berita</option>
+          <option>Medsos</option>
+          <option>Marketplace</option>
+          <option>Rilis Resmi</option>
+        </select>
+        <select id="fVerifikasi">
+          <option value="">Semua Verifikasi</option>
+          <option>Terverifikasi</option>
+          <option>Perlu Cek</option>
+          <option>Belum Dicek</option>
+        </select>
+        <input id="fCari" placeholder="Cari kata kunci..." />
+        <button id="btnReset">Reset</button>
+        <button id="btnCSV" class="primary">Unduh CSV</button>
+      </div>
+
+      <div class="grid grid-2">
+        <div class="card"><canvas id="chartWilayah" height="140"></canvas></div>
+        <div class="card"><canvas id="chartPlatform" height="140"></canvas></div>
+      </div>
+    </div>
+
+    <div class="card">
+      <div class="section-title">Feed RSS Media</div>
+      <textarea id="taFeeds" rows="10"></textarea>
+      <div class="footer-note">Satu URL per baris. Tersimpan ke spreadsheet.</div>
+      <div class="controls" style="margin-top:10px;">
+        <button id="btnSaveFeeds">Simpan Feed</button>
+        <button id="btnReloadRSS" class="primary">Muat Ulang RSS</button>
+      </div>
+    </div>
+
+    <div class="card">
+      <div class="section-title">Kata Kunci Dinamis</div>
+      <textarea id="taKeywords" rows="10"></textarea>
+      <div class="footer-note">Pisahkan dengan koma. Tersimpan ke spreadsheet.</div>
+      <div class="controls" style="margin-top:10px;">
+        <button id="btnSaveKeywords">Simpan Kata Kunci</button>
+      </div>
+    </div>
+  </div>
+
+  <div class="card" style="margin-top:16px;">
+    <div class="section-title">Tambah / Edit Data Manual</div>
+    <div class="grid grid-2">
+      <div>
+        <div class="controls">
+          <input id="mId" type="hidden" />
+          <input id="mTanggal" type="date" />
+          <select id="mWilayah" class="w-100"></select>
+          <select id="mKategori">
+            <option>Community Alert</option>
+            <option>Penegakan Hukum</option>
+            <option>Pemusnahan BB</option>
+            <option>Pencegahan/Edukasi</option>
+            <option>Kebijakan/Instruksi</option>
+            <option>Sentimen Publik Online</option>
+          </select>
+          <select id="mPlatform">
+            <option>Medsos</option>
+            <option>Marketplace</option>
+            <option>Berita</option>
+            <option>Rilis Resmi</option>
+          </select>
+        </div>
+        <div class="controls">
+          <input id="mPeristiwa" style="flex:1" placeholder="Peristiwa / temuan" />
+          <input id="mAkun" placeholder="Akun / channel / seller" />
+        </div>
+        <div class="controls">
+          <input id="mBB" placeholder="Barang bukti / indikasi" />
+          <input id="mTersangka" placeholder="Tersangka / pihak terkait" />
+        </div>
+        <div class="controls">
+          <input id="mModus" placeholder="Modus / pola" />
+          <select id="mUrgensi">
+            <option>Rendah</option>
+            <option>Sedang</option>
+            <option>Tinggi</option>
+          </select>
+          <select id="mVerifikasi">
+            <option>Belum Dicek</option>
+            <option>Perlu Cek</option>
+            <option>Terverifikasi</option>
+          </select>
+        </div>
+        <div class="controls">
+          <input id="mSumber" style="flex:1" placeholder="URL sumber (opsional)" />
+          <input id="mPetugas" placeholder="Petugas input" />
+        </div>
+        <textarea id="mCatatan" rows="4" placeholder="Catatan analisis / konteks tambahan"></textarea>
+        <div class="controls" style="margin-top:10px;">
+          <button id="btnTambah" class="primary">Simpan Data</button>
+          <button id="btnBatalEdit" class="ghost hidden">Batal Edit</button>
+          <button id="btnClearManual" class="danger">Hapus Semua Data Manual</button>
+        </div>
+      </div>
+      <div>
+        <div class="section-title">Petunjuk Kolom Tambahan</div>
+        <div class="footer-note">
+          <p><span class="pill">Akun / channel</span> misalnya nama akun TikTok, IG, grup, atau seller marketplace.</p>
+          <p><span class="pill">Modus / pola</span> misalnya COD, akun baru, kode emoji, paket kilat, ranjau, samaran barang.</p>
+          <p><span class="pill">Urgensi</span> untuk prioritas tindak lanjut internal.</p>
+          <p><span class="pill">Verifikasi</span> untuk penanda kualitas validasi informasi.</p>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <div class="card" style="margin-top:16px;">
+    <div class="section-title">Tabel Monitoring</div>
+    <div class="table-wrap">
+      <table id="tabel">
+        <thead>
+          <tr>
+            <th>Tanggal</th>
+            <th>Wilayah</th>
+            <th>Kategori</th>
+            <th>Peristiwa</th>
+            <th>Platform</th>
+            <th>Urgensi</th>
+            <th>Verifikasi</th>
+            <th>Sumber</th>
+            <th>Aksi</th>
+          </tr>
+        </thead>
+        <tbody></tbody>
+      </table>
+    </div>
+    <div class="footer-note">Data RSS dan data manual ditampilkan bersamaan. Tombol edit/hapus hanya aktif untuk data manual.</div>
+  </div>
+</div>
+
+<script>
+/* ========================= KONFIGURASI ========================= */
+const API_URL = "https://script.google.com/macros/s/AKfycby5aVCyiHby_W7TV78s13shAjgFR9V4D3pKf5FxtmOY1cO7NEuuzN0Jt9B_CIQdb4vH/exec";
+
+const WILAYAH_FIXED = [
+  "Pontianak (Kota)","Singkawang (Kota)",
+  "Sambas","Bengkayang","Landak","Mempawah","Sanggau","Sekadau","Sintang","Melawi",
+  "Kapuas Hulu","Ketapang","Kayong Utara","Kubu Raya"
+];
+
+const DEFAULT_FEEDS = [
+  "https://kalbar.antaranews.com/rss",
+  "https://www.kalbaronline.com/feed/"
+];
+
+const DEFAULT_KEYWORDS = [
+  "narkoba","narkotika","psikotropika","sabu","ganja","ekstasi","heroin","putaw",
+  "cimeng","inex","kristal","pil setan","🍫","💊","🌿","❄️","paket","bumbu","es",
+  "COD","rekening topeng","paket kilat","ekspedisi","kargo","titip barang","ranjau","kemasan teh","kemasan durian",
+  "Air Upas","Entikong","Bandara Supadio","perbatasan Malaysia","Sambas","Singkawang","Pontianak","Kubu Raya","Ketapang"
+];
+
+const CORS_PROXY = "https://api.allorigins.win/raw?url=";
+const WILAYAH_ALL = new Set(WILAYAH_FIXED);
+
+let DATA_RSS = [];
+let DATA_MANUAL = [];
+let barChart, pieChart;
+let state = { wilayah:"", kategori:"", platform:"", verifikasi:"", query:"" };
+
+/* ========================= UTIL ========================= */
+const qs = s => document.querySelector(s);
+const qsa = s => Array.from(document.querySelectorAll(s));
+
+function nowDateISO(){
+  const d = new Date();
+  const p = n => String(n).padStart(2,"0");
+  return `${d.getFullYear()}-${p(d.getMonth()+1)}-${p(d.getDate())}`;
+}
+
+function esc(str){
+  return String(str ?? "")
+    .replaceAll("&", "&amp;")
+    .replaceAll("<", "&lt;")
+    .replaceAll(">", "&gt;")
+    .replaceAll('"', "&quot;")
+    .replaceAll("'", "&#039;");
+}
+
+function isValidUrl(u){
+  try{
+    const x = new URL(u);
+    return /^https?:$/.test(x.protocol);
+  }catch(e){
+    return false;
+  }
+}
+
+function googleLink(row){
+  const q = encodeURIComponent([
+    row.Peristiwa || "",
+    row.Wilayah || "",
+    row.Platform || "",
+    "Kalbar"
+  ].join(" "));
+  return `https://www.google.com/search?q=${q}`;
+}
+
+function badgeClass(k){
+  if (k === 'Community Alert') return 'badge b-red';
+  if (k === 'Penegakan Hukum') return 'badge b-blue';
+  if (k === 'Pencegahan/Edukasi') return 'badge b-green';
+  if (k === 'Pemusnahan BB') return 'badge b-amber';
+  return 'badge b-gray';
+}
+
+function detectWilayah(txt){
+  const t = (txt || "").toLowerCase();
+  const base = WILAYAH_FIXED.map(w => w.replace(" (Kota)",""));
+  const hit = base.find(w => t.includes(w.toLowerCase()));
+  return hit ? ((hit === "Pontianak" || hit === "Singkawang") ? `${hit} (Kota)` : hit) : "Kalbar (Provinsi)";
+}
+
+function kategoriHeuristik(txt){
+  const t = (txt || "").toLowerCase();
+  if (t.includes("air upas")) return "Community Alert";
+  if (t.includes("tangkap") || t.includes("amankan") || t.includes("ungkap") || t.includes("barang bukti") || t.includes("tersangka")) return "Penegakan Hukum";
+  if (t.includes("musnah") || t.includes("pemusnahan")) return "Pemusnahan BB";
+  if (t.includes("bnn") || t.includes("edukasi") || t.includes("penyuluhan")) return "Pencegahan/Edukasi";
+  return "Sentimen Publik Online";
+}
+
+function containsAny(text, arr){
+  const t = (text || "").toLowerCase();
+  return arr.some(k => t.includes(String(k).toLowerCase()));
+}
+
+function sourceCell(row){
+  if(row.Sumber && isValidUrl(row.Sumber)){
+    let host = "Buka Sumber";
+    try { host = new URL(row.Sumber).hostname.replace(/^www\./,''); } catch(e) {}
+    return `<a class="btn-link" href="${esc(row.Sumber)}" target="_blank" rel="noopener">${esc(host)} →</a>`;
+  }
+  return `<a class="btn-link" href="${googleLink(row)}" target="_blank" rel="noopener">Cari di Google →</a>`;
+}
+
+function urgencyBadge(v){
+  const val = String(v || 'Rendah');
+  if(val === 'Tinggi') return '<span class="badge b-red">Tinggi</span>';
+  if(val === 'Sedang') return '<span class="badge b-amber">Sedang</span>';
+  return '<span class="badge b-green">Rendah</span>';
+}
+
+function verifBadge(v){
+  const val = String(v || 'Belum Dicek');
+  if(val === 'Terverifikasi') return '<span class="badge b-green">Terverifikasi</span>';
+  if(val === 'Perlu Cek') return '<span class="badge b-amber">Perlu Cek</span>';
+  return '<span class="badge b-gray">Belum Dicek</span>';
+}
+
+function setLoading(btn, loading, textDefault = null){
+  if(!btn) return;
+  if(loading){
+    btn.dataset.old = btn.textContent;
+    btn.disabled = true;
+    btn.textContent = 'Memproses...';
+  }else{
+    btn.disabled = false;
+    btn.textContent = textDefault || btn.dataset.old || btn.textContent;
+  }
+}
+
+/* ========================= API ========================= */
+async function apiGet(action){
+  const res = await fetch(`${API_URL}?action=${encodeURIComponent(action)}`, { cache: 'no-store' });
+  return await res.json();
+}
+
+async function apiPost(action, payload){
+  const res = await fetch(API_URL, {
+    method: 'POST',
+    headers: { 'Content-Type': 'text/plain;charset=utf-8' },
+    body: JSON.stringify({ action, payload })
+  });
+  return await res.json();
+}
+
+/* ========================= RSS ========================= */
+async function fetchText(url){
+  try{
+    const r = await fetch(url, { cache:'no-store' });
+    if(r.ok) return await r.text();
+  }catch(e){}
+  const r2 = await fetch(CORS_PROXY + encodeURIComponent(url), { cache:'no-store' });
+  if(!r2.ok) throw new Error('Proxy gagal');
+  return await r2.text();
+}
+
+function parseRSS(xmlStr){
+  const parser = new DOMParser();
+  const xml = parser.parseFromString(xmlStr, 'application/xml');
+
+  const rss = [...xml.querySelectorAll('channel > item')].map(it => ({
+    title: it.querySelector('title')?.textContent || '',
+    link: it.querySelector('link')?.textContent || '',
+    desc: it.querySelector('description')?.textContent || '',
+    pubDate: it.querySelector('pubDate')?.textContent || ''
+  }));
+  if(rss.length) return rss;
+
+  return [...xml.querySelectorAll('entry')].map(it => ({
+    title: it.querySelector('title')?.textContent || '',
+    link: it.querySelector("link[rel='alternate']")?.getAttribute('href') || it.querySelector('link')?.getAttribute('href') || '',
+    desc: it.querySelector('summary')?.textContent || it.querySelector('content')?.textContent || '',
+    pubDate: it.querySelector('updated')?.textContent || ''
+  }));
+}
+
+async function crawlFeeds(feeds, keywords){
+  const out = [];
+  for(const src of feeds){
+    try{
+      const txt = await fetchText(src);
+      const entries = parseRSS(txt);
+      for(const it of entries){
+        const blob = `${it.title} ${it.desc}`.trim();
+        if(containsAny(blob, keywords)){
+          const wilayah = detectWilayah(blob);
+          WILAYAH_ALL.add(wilayah);
+          out.push({
+            id: `rss-${btoa((it.link || it.title).slice(0, 40)).replace(/=/g,'')}`,
+            Tanggal: nowDateISO(),
+            Wilayah: wilayah,
+            Kategori: kategoriHeuristik(blob),
+            Peristiwa: it.title,
+            Akun: 'RSS Media',
+            'Barang Bukti': '—',
+            Tersangka: '—',
+            Platform: 'Berita',
+            Modus: '—',
+            Urgensi: 'Sedang',
+            Verifikasi: 'Belum Dicek',
+            Catatan: it.desc || '',
+            Petugas: 'Sistem',
+            Sumber: isValidUrl(it.link) ? it.link : '',
+            _editable: false
+          });
+        }
+      }
+    }catch(err){
+      console.warn('Gagal feed', src, err);
+    }
+  }
+  return out;
+}
+
+/* ========================= LOAD DATA ========================= */
+async function loadFeedsFromAPI(){
+  const res = await apiGet('getFeeds');
+  const feeds = (res.ok && Array.isArray(res.data) && res.data.length) ? res.data : DEFAULT_FEEDS;
+  qs('#taFeeds').value = feeds.join('\n');
+  return feeds;
+}
+
+async function saveFeedsToAPI(){
+  const btn = qs('#btnSaveFeeds');
+  try{
+    setLoading(btn, true);
+    const feeds = qs('#taFeeds').value.split('\n').map(s => s.trim()).filter(Boolean);
+    const res = await apiPost('saveFeeds', feeds);
+    if(!res.ok) throw new Error(res.message || 'Gagal simpan feed');
+    alert('Feed berhasil disimpan ke spreadsheet.');
+  }catch(err){
+    alert(err.message);
+  }finally{
+    setLoading(btn, false, 'Simpan Feed');
+  }
+}
+
+async function loadKeywordsFromAPI(){
+  const res = await apiGet('getKeywords');
+  const keywords = (res.ok && Array.isArray(res.data) && res.data.length) ? res.data : DEFAULT_KEYWORDS;
+  qs('#taKeywords').value = keywords.join(', ');
+  return keywords;
+}
+
+async function saveKeywordsToAPI(){
+  const btn = qs('#btnSaveKeywords');
+  try{
+    setLoading(btn, true);
+    const keywords = qs('#taKeywords').value.split(',').map(s => s.trim()).filter(Boolean);
+    const res = await apiPost('saveKeywords', keywords);
+    if(!res.ok) throw new Error(res.message || 'Gagal simpan kata kunci');
+    alert('Kata kunci berhasil disimpan ke spreadsheet.');
+  }catch(err){
+    alert(err.message);
+  }finally{
+    setLoading(btn, false, 'Simpan Kata Kunci');
+  }
+}
+
+async function loadManualFromAPI(){
+  const res = await apiGet('getManualData');
+  if(res.ok && Array.isArray(res.data)){
+    DATA_MANUAL = res.data.map(r => ({
+      id: r.id || '',
+      Tanggal: r.tanggal || '',
+      Wilayah: r.wilayah || 'Kalbar (Provinsi)',
+      Kategori: r.kategori || 'Sentimen Publik Online',
+      Peristiwa: r.peristiwa || '',
+      Akun: r.akun || '',
+      'Barang Bukti': r.barang_bukti || '—',
+      Tersangka: r.tersangka || '—',
+      Platform: r.platform || 'Medsos',
+      Modus: r.modus || '',
+      Urgensi: r.urgensi || 'Rendah',
+      Verifikasi: r.verifikasi || 'Belum Dicek',
+      Catatan: r.catatan || '',
+      Petugas: r.petugas || '',
+      Sumber: r.sumber || '',
+      _editable: true
+    }));
+    DATA_MANUAL.forEach(r => WILAYAH_ALL.add(r.Wilayah));
+  }else{
+    DATA_MANUAL = [];
+  }
+}
+
+/* ========================= FILTER & RENDER ========================= */
+function getAllData(){ return [...DATA_RSS, ...DATA_MANUAL]; }
+
+function filtered(){
+  return getAllData().filter(d => {
+    const a = !state.wilayah || d.Wilayah === state.wilayah;
+    const b = !state.kategori || d.Kategori === state.kategori;
+    const c = !state.platform || d.Platform === state.platform;
+    const v = !state.verifikasi || d.Verifikasi === state.verifikasi;
+    const str = [
+      d.Wilayah, d.Kategori, d.Peristiwa, d.Akun, d['Barang Bukti'], d.Tersangka,
+      d.Platform, d.Modus, d.Urgensi, d.Verifikasi, d.Catatan, d.Petugas
+    ].join(' ').toLowerCase();
+    const q = !state.query || str.includes(state.query);
+    return a && b && c && v && q;
+  });
+}
+
+function withAllWilayahCount(rows){
+  const map = {};
+  Array.from(WILAYAH_ALL).forEach(w => map[w] = 0);
+  rows.forEach(r => map[r.Wilayah] = (map[r.Wilayah] || 0) + 1);
+  return {
+    labels: Array.from(WILAYAH_ALL),
+    values: Array.from(WILAYAH_ALL).map(w => map[w] || 0)
+  };
+}
+
+function renderStats(rows){
+  qs('#sTotal').textContent = rows.length;
+  qs('#sAlert').textContent = rows.filter(r => r.Kategori === 'Community Alert').length;
+  qs('#sHukum').textContent = rows.filter(r => r.Kategori === 'Penegakan Hukum').length;
+  qs('#sManual').textContent = DATA_MANUAL.length;
+}
+
+function renderTable(rows){
+  const tb = qs('#tabel tbody');
+  tb.innerHTML = rows.map(r => `
+    <tr>
+      <td>${esc(r.Tanggal)}</td>
+      <td>${esc(r.Wilayah)}</td>
+      <td><span class="${badgeClass(r.Kategori)}">${esc(r.Kategori)}</span></td>
+      <td>
+        <div><b>${esc(r.Peristiwa)}</b></div>
+        <div class="muted">${esc(r.Akun || '')}</div>
+        ${r.Catatan ? `<div class="muted" style="margin-top:4px">${esc(r.Catatan)}</div>` : ''}
+      </td>
+      <td>${esc(r.Platform || '')}</td>
+      <td>${urgencyBadge(r.Urgensi)}</td>
+      <td>${verifBadge(r.Verifikasi)}</td>
+      <td>${sourceCell(r)}</td>
+      <td>
+        <div class="row-actions">
+          ${r._editable ? `<button class="btn-link" onclick="editRow('${esc(r.id)}')">Edit</button>` : ''}
+          ${r._editable ? `<button class="btn-link" onclick="deleteRow('${esc(r.id)}')">Hapus</button>` : ''}
+        </div>
+      </td>
+    </tr>
+  `).join('');
+}
+
+function renderCharts(rows){
+  const full = withAllWilayahCount(rows);
+  const perPlt = {};
+  rows.forEach(r => perPlt[r.Platform || 'Lainnya'] = (perPlt[r.Platform || 'Lainnya'] || 0) + 1);
+
+  const c1 = qs('#chartWilayah').getContext('2d');
+  const c2 = qs('#chartPlatform').getContext('2d');
+
+  if(barChart) barChart.destroy();
+  if(pieChart) pieChart.destroy();
+
+  barChart = new Chart(c1, {
+    type:'bar',
+    data:{ labels: full.labels, datasets:[{ label:'Temuan', data: full.values }] },
+    options:{ plugins:{ legend:{ display:false } }, scales:{ y:{ beginAtZero:true } } }
+  });
+
+  pieChart = new Chart(c2, {
+    type:'pie',
+    data:{ labels:Object.keys(perPlt), datasets:[{ data:Object.values(perPlt) }] },
+    options:{ plugins:{ legend:{ position:'bottom' } } }
+  });
+}
+
+function toCSV(rows){
+  const header = [
+    'Tanggal','Wilayah','Kategori','Peristiwa','Akun','Barang Bukti','Tersangka',
+    'Platform','Modus','Urgensi','Verifikasi','Catatan','Petugas','Sumber'
+  ];
+  const body = rows.map(r => [
+    r.Tanggal,r.Wilayah,r.Kategori,
+    r.Peristiwa,r.Akun,r['Barang Bukti'],r.Tersangka,
+    r.Platform,r.Modus,r.Urgensi,r.Verifikasi,r.Catatan,r.Petugas,r.Sumber
+  ].map(v => `"${String(v ?? '').replaceAll('"','""')}"`).join(','));
+  return [header.join(','), ...body].join('\n');
+}
+
+function render(){
+  const rows = filtered();
+  renderStats(rows);
+  renderTable(rows);
+  renderCharts(rows);
+}
+
+/* ========================= FORM ========================= */
+function resetForm(){
+  qs('#mId').value = '';
+  qs('#mTanggal').value = nowDateISO();
+  qs('#mWilayah').value = WILAYAH_FIXED[0] || '';
+  qs('#mKategori').value = 'Community Alert';
+  qs('#mPlatform').value = 'Medsos';
+  qs('#mPeristiwa').value = '';
+  qs('#mAkun').value = '';
+  qs('#mBB').value = '';
+  qs('#mTersangka').value = '';
+  qs('#mModus').value = '';
+  qs('#mUrgensi').value = 'Rendah';
+  qs('#mVerifikasi').value = 'Belum Dicek';
+  qs('#mSumber').value = '';
+  qs('#mPetugas').value = '';
+  qs('#mCatatan').value = '';
+  qs('#btnBatalEdit').classList.add('hidden');
+  qs('#btnTambah').textContent = 'Simpan Data';
+}
+
+async function saveManualRow(){
+  const btn = qs('#btnTambah');
+  try{
+    setLoading(btn, true);
+
+    const payload = {
+      id: qs('#mId').value || '',
+      tanggal: qs('#mTanggal').value || nowDateISO(),
+      wilayah: qs('#mWilayah').value || 'Kalbar (Provinsi)',
+      kategori: qs('#mKategori').value || 'Sentimen Publik Online',
+      peristiwa: qs('#mPeristiwa').value.trim(),
+      akun: qs('#mAkun').value.trim(),
+      barang_bukti: qs('#mBB').value.trim() || '—',
+      tersangka: qs('#mTersangka').value.trim() || '—',
+      platform: qs('#mPlatform').value || 'Medsos',
+      modus: qs('#mModus').value.trim(),
+      urgensi: qs('#mUrgensi').value || 'Rendah',
+      verifikasi: qs('#mVerifikasi').value || 'Belum Dicek',
+      catatan: qs('#mCatatan').value.trim(),
+      petugas: qs('#mPetugas').value.trim(),
+      sumber: isValidUrl(qs('#mSumber').value.trim()) ? qs('#mSumber').value.trim() : ''
+    };
+
+    if(!payload.peristiwa){
+      throw new Error('Peristiwa wajib diisi.');
+    }
+
+    const action = payload.id ? 'updateManualData' : 'addManualData';
+    const res = await apiPost(action, payload);
+    if(!res.ok) throw new Error(res.message || 'Gagal menyimpan data');
+
+    await loadManualFromAPI();
+    resetForm();
+    render();
+    alert(payload.id ? 'Data berhasil diperbarui.' : 'Data berhasil ditambahkan.');
+  }catch(err){
+    alert(err.message);
+  }finally{
+    setLoading(btn, false, 'Simpan Data');
+  }
+}
+
+window.editRow = function(id){
+  const row = DATA_MANUAL.find(r => r.id === id);
+  if(!row) return;
+  qs('#mId').value = row.id || '';
+  qs('#mTanggal').value = row.Tanggal || nowDateISO();
+  qs('#mWilayah').value = row.Wilayah || '';
+  qs('#mKategori').value = row.Kategori || 'Sentimen Publik Online';
+  qs('#mPlatform').value = row.Platform || 'Medsos';
+  qs('#mPeristiwa').value = row.Peristiwa || '';
+  qs('#mAkun').value = row.Akun || '';
+  qs('#mBB').value = row['Barang Bukti'] || '';
+  qs('#mTersangka').value = row.Tersangka || '';
+  qs('#mModus').value = row.Modus || '';
+  qs('#mUrgensi').value = row.Urgensi || 'Rendah';
+  qs('#mVerifikasi').value = row.Verifikasi || 'Belum Dicek';
+  qs('#mSumber').value = row.Sumber || '';
+  qs('#mPetugas').value = row.Petugas || '';
+  qs('#mCatatan').value = row.Catatan || '';
+  qs('#btnTambah').textContent = 'Update Data';
+  qs('#btnBatalEdit').classList.remove('hidden');
+  window.scrollTo({ top: 0, behavior: 'smooth' });
+}
+
+window.deleteRow = async function(id){
+  if(!confirm('Hapus data ini?')) return;
+  try{
+    const res = await apiPost('deleteManualData', { id });
+    if(!res.ok) throw new Error(res.message || 'Gagal menghapus data');
+    await loadManualFromAPI();
+    render();
+    alert('Data berhasil dihapus.');
+  }catch(err){
+    alert(err.message);
+  }
+}
+
+async function clearManualDataAPI(){
+  if(!confirm('Hapus SEMUA data manual di spreadsheet?')) return;
+  try{
+    const res = await apiPost('clearManualData', {});
+    if(!res.ok) throw new Error(res.message || 'Gagal hapus semua data');
+    await loadManualFromAPI();
+    render();
+    alert('Semua data manual berhasil dihapus.');
+  }catch(err){
+    alert(err.message);
+  }
+}
+
+/* ========================= INIT ========================= */
+async function init(){
+  const sel = qs('#fWilayah');
+  const selM = qs('#mWilayah');
+
+  WILAYAH_FIXED.forEach(w => {
+    const o1 = document.createElement('option');
+    o1.value = w;
+    o1.textContent = w;
+    sel.appendChild(o1);
+
+    const o2 = document.createElement('option');
+    o2.value = w;
+    o2.textContent = w;
+    selM.appendChild(o2);
+  });
+
+  resetForm();
+
+  const feeds = await loadFeedsFromAPI();
+  const keywords = await loadKeywordsFromAPI();
+  await loadManualFromAPI();
+  DATA_RSS = await crawlFeeds(feeds, keywords);
+  render();
+}
+
+/* ========================= EVENTS ========================= */
+qs('#btnSaveFeeds').onclick = saveFeedsToAPI;
+qs('#btnSaveKeywords').onclick = saveKeywordsToAPI;
+qs('#btnTambah').onclick = saveManualRow;
+qs('#btnBatalEdit').onclick = resetForm;
+qs('#btnClearManual').onclick = clearManualDataAPI;
+
+qs('#btnReloadRSS').onclick = async function(){
+  const btn = this;
+  try{
+    setLoading(btn, true);
+    const feeds = await loadFeedsFromAPI();
+    const keywords = await loadKeywordsFromAPI();
+    DATA_RSS = [];
+    render();
+    DATA_RSS = await crawlFeeds(feeds, keywords);
+    render();
+    alert('RSS berhasil dimuat ulang.');
+  }catch(err){
+    alert(err.message || 'Gagal muat ulang RSS');
+  }finally{
+    setLoading(btn, false, 'Muat Ulang RSS');
+  }
+};
+
+qs('#fWilayah').onchange = e => { state.wilayah = e.target.value; render(); };
+qs('#fKategori').onchange = e => { state.kategori = e.target.value; render(); };
+qs('#fPlatform').onchange = e => { state.platform = e.target.value; render(); };
+qs('#fVerifikasi').onchange = e => { state.verifikasi = e.target.value; render(); };
+qs('#fCari').oninput = e => { state.query = e.target.value.toLowerCase(); render(); };
+
+qs('#btnReset').onclick = () => {
+  state = { wilayah:'', kategori:'', platform:'', verifikasi:'', query:'' };
+  qs('#fWilayah').value = '';
+  qs('#fKategori').value = '';
+  qs('#fPlatform').value = '';
+  qs('#fVerifikasi').value = '';
+  qs('#fCari').value = '';
+  render();
+};
+
+qs('#btnCSV').onclick = () => {
+  const csv = toCSV(filtered());
+  const blob = new Blob([csv], { type:'text/csv;charset=utf-8;' });
+  const url = URL.createObjectURL(blob);
+  const a = Object.assign(document.createElement('a'), {
+    href: url,
+    download: 'monitoring_siber_kalbar.csv'
+  });
+  document.body.appendChild(a);
+  a.click();
+  a.remove();
+  URL.revokeObjectURL(url);
+};
+
+init();
+</script>
+</body>
+</html>
