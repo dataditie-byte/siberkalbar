@@ -3,7 +3,7 @@
 <head>
   <meta charset="UTF-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-  <title>Monitoring Siber Kalbar — GitHub + Google Sheets</title>
+  <title>Dashboard Monitoring Siber Kalbar</title>
   <script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.1"></script>
   <style>
     :root{
@@ -13,15 +13,12 @@
       --ink:#0f172a;
       --muted:#64748b;
       --brand:#0b3b66;
-      --brand2:#0f766e;
       --danger:#b91c1c;
       --warn:#b45309;
       --ok:#166534;
-      --blue:#075985;
       --shadow:0 8px 24px rgba(15,23,42,.06);
       --radius:16px;
     }
-
     *{box-sizing:border-box}
     body{
       margin:0;
@@ -34,7 +31,7 @@
       color:#fff;
       padding:18px 20px;
     }
-    header h1{margin:0;font-size:22px;line-height:1.2}
+    header h1{margin:0;font-size:22px}
     header p{margin:6px 0 0;color:#dbeafe;font-size:13px}
     .wrap{max-width:1280px;margin:0 auto;padding:18px}
     .grid{display:grid;gap:16px}
@@ -48,7 +45,6 @@
       padding:16px;
     }
     .section-title{font-size:15px;font-weight:700;margin:0 0 10px}
-    .sub{font-size:12px;color:var(--muted)}
     .controls{display:flex;flex-wrap:wrap;gap:10px;margin-bottom:12px}
     select,input,textarea,button{
       font:inherit;
@@ -57,11 +53,9 @@
       padding:10px 12px;
       background:#fff;
     }
-    input,select,textarea{color:var(--ink)}
     textarea{width:100%;resize:vertical}
     button{cursor:pointer}
     .primary{background:var(--brand);border-color:var(--brand);color:#fff}
-    .secondary{background:var(--brand2);border-color:var(--brand2);color:#fff}
     .danger{background:var(--danger);border-color:var(--danger);color:#fff}
     .ghost{background:#fff}
     .stats{display:grid;grid-template-columns:repeat(4,1fr);gap:12px}
@@ -92,6 +86,7 @@
       color:var(--ink);
       background:#fff;
       white-space:nowrap;
+      cursor:pointer;
     }
     .muted{color:var(--muted)}
     .hidden{display:none !important}
@@ -112,7 +107,6 @@
     .footer-note{font-size:12px;color:var(--muted);margin-top:8px}
     .pill{padding:4px 8px;border-radius:999px;background:#eff6ff;color:#1e40af;font-size:12px;font-weight:600}
     .w-100{width:100%}
-
     @media (max-width:1100px){
       .grid-3,.grid-2,.stats{grid-template-columns:1fr}
     }
@@ -125,27 +119,13 @@
 </header>
 
 <div class="wrap">
-  <div id="statusBox" class="notice">
-    Dashboard terhubung ke Google Sheets dan Google Apps Script.
-  </div>
+  <div id="statusBox" class="notice">Memuat dashboard...</div>
 
   <div class="stats card">
-    <div class="stat">
-      <div class="muted">Total Data Tampil</div>
-      <div class="n" id="sTotal">0</div>
-    </div>
-    <div class="stat">
-      <div class="muted">Community Alert</div>
-      <div class="n" id="sAlert">0</div>
-    </div>
-    <div class="stat">
-      <div class="muted">Penegakan Hukum</div>
-      <div class="n" id="sHukum">0</div>
-    </div>
-    <div class="stat">
-      <div class="muted">Data Manual</div>
-      <div class="n" id="sManual">0</div>
-    </div>
+    <div class="stat"><div class="muted">Total Data Tampil</div><div class="n" id="sTotal">0</div></div>
+    <div class="stat"><div class="muted">Community Alert</div><div class="n" id="sAlert">0</div></div>
+    <div class="stat"><div class="muted">Penegakan Hukum</div><div class="n" id="sHukum">0</div></div>
+    <div class="stat"><div class="muted">Data Manual</div><div class="n" id="sManual">0</div></div>
   </div>
 
   <div class="grid grid-3" style="margin-top:16px;">
@@ -324,7 +304,6 @@ const CORS_PROXIES = [
 ];
 
 const WILAYAH_ALL = new Set(WILAYAH_FIXED);
-
 let DATA_RSS = [];
 let DATA_MANUAL = [];
 let barChart, pieChart;
@@ -363,12 +342,7 @@ function isValidUrl(u){
 }
 
 function googleLink(row){
-  const q = encodeURIComponent([
-    row.Peristiwa || "",
-    row.Wilayah || "",
-    row.Platform || "",
-    "Kalbar"
-  ].join(" "));
+  const q = encodeURIComponent([row.Peristiwa || "", row.Wilayah || "", row.Platform || "", "Kalbar"].join(" "));
   return `https://www.google.com/search?q=${q}`;
 }
 
@@ -424,7 +398,7 @@ function verifBadge(v){
   return '<span class="badge b-gray">Belum Dicek</span>';
 }
 
-function setLoading(btn, loading, textDefault = null){
+function setLoading(btn, loading, textDefault=null){
   if(!btn) return;
   if(loading){
     btn.dataset.old = btn.textContent;
@@ -438,7 +412,12 @@ function setLoading(btn, loading, textDefault = null){
 
 async function apiGet(action){
   const res = await fetch(`${API_URL}?action=${encodeURIComponent(action)}`, { cache:'no-store' });
-  return await res.json();
+  const text = await res.text();
+  try{
+    return JSON.parse(text);
+  }catch{
+    throw new Error(`API ${action} tidak mengembalikan JSON valid`);
+  }
 }
 
 async function apiPost(action, payload){
@@ -447,7 +426,12 @@ async function apiPost(action, payload){
     headers:{ 'Content-Type':'text/plain;charset=utf-8' },
     body: JSON.stringify({ action, payload })
   });
-  return await res.json();
+  const text = await res.text();
+  try{
+    return JSON.parse(text);
+  }catch{
+    throw new Error(`API ${action} tidak mengembalikan JSON valid`);
+  }
 }
 
 async function fetchText(url){
@@ -461,8 +445,7 @@ async function fetchText(url){
 
   for(const makeProxy of CORS_PROXIES){
     try{
-      const proxied = makeProxy(url);
-      const r = await fetch(proxied, { cache:'no-store' });
+      const r = await fetch(makeProxy(url), { cache:'no-store' });
       if(r.ok){
         const txt = await r.text();
         if(txt && txt.length > 50) return txt;
@@ -485,12 +468,13 @@ function parseRSS(xmlStr){
   }));
   if(rss.length) return rss;
 
-  return [...xml.querySelectorAll('entry')].map(it => ({
+  const atom = [...xml.querySelectorAll('entry')].map(it => ({
     title: it.querySelector('title')?.textContent || '',
     link: it.querySelector("link[rel='alternate']")?.getAttribute('href') || it.querySelector('link')?.getAttribute('href') || '',
     desc: it.querySelector('summary')?.textContent || it.querySelector('content')?.textContent || '',
     pubDate: it.querySelector('updated')?.textContent || ''
   }));
+  return atom;
 }
 
 async function crawlFeeds(feeds, keywords){
@@ -505,7 +489,6 @@ async function crawlFeeds(feeds, keywords){
 
       for (const it of entries) {
         const blob = `${it.title || ''} ${it.desc || ''}`.trim();
-
         const matched =
           containsAny(blob, keywords) ||
           blob.toLowerCase().includes("kalbar") ||
@@ -519,7 +502,7 @@ async function crawlFeeds(feeds, keywords){
         WILAYAH_ALL.add(wilayah);
 
         out.push({
-          id: `rss-${btoa((it.link || it.title || Math.random().toString()).slice(0, 40)).replace(/=/g, '')}`,
+          id: `rss-${btoa((it.link || it.title || Math.random().toString()).slice(0,40)).replace(/=/g,'')}`,
           Tanggal: nowDateISO(),
           Wilayah: wilayah,
           Kategori: kategoriHeuristik(blob),
@@ -543,9 +526,9 @@ async function crawlFeeds(feeds, keywords){
   }
 
   if(feedOk === 0){
-    setStatus("RSS belum berhasil diambil. Coba klik 'Muat Ulang RSS' atau cek akses feed/proxy.", true);
+    setStatus("RSS belum berhasil diambil. Klik 'Muat Ulang RSS' atau cek feed/proxy.", true);
   }else if(out.length === 0){
-    setStatus("Feed berhasil dibaca, tetapi belum ada item yang cocok dengan filter kata kunci.", true);
+    setStatus("Feed berhasil dibaca, tetapi belum ada item yang cocok dengan kata kunci.", true);
   }else{
     setStatus(`RSS aktif. ${out.length} item berhasil dimuat dari ${feedOk} feed.`, false);
   }
@@ -555,73 +538,44 @@ async function crawlFeeds(feeds, keywords){
 
 async function loadFeedsFromAPI(){
   const res = await apiGet('getFeeds');
-  const feeds = (res.ok && Array.isArray(res.data) && res.data.length) ? res.data : DEFAULT_FEEDS;
+  if(!res || !res.ok) throw new Error(res?.message || 'getFeeds gagal');
+  const feeds = Array.isArray(res.data) && res.data.length ? res.data : DEFAULT_FEEDS;
   qs('#taFeeds').value = feeds.join('\n');
   return feeds;
 }
 
-async function saveFeedsToAPI(){
-  const btn = qs('#btnSaveFeeds');
-  try{
-    setLoading(btn, true);
-    const feeds = qs('#taFeeds').value.split('\n').map(s => s.trim()).filter(Boolean);
-    const res = await apiPost('saveFeeds', feeds);
-    if(!res.ok) throw new Error(res.message || 'Gagal simpan feed');
-    alert('Feed berhasil disimpan ke spreadsheet.');
-  }catch(err){
-    alert(err.message);
-  }finally{
-    setLoading(btn, false, 'Simpan Feed');
-  }
-}
-
 async function loadKeywordsFromAPI(){
   const res = await apiGet('getKeywords');
-  const keywords = (res.ok && Array.isArray(res.data) && res.data.length) ? res.data : DEFAULT_KEYWORDS;
+  if(!res || !res.ok) throw new Error(res?.message || 'getKeywords gagal');
+  const keywords = Array.isArray(res.data) && res.data.length ? res.data : DEFAULT_KEYWORDS;
   qs('#taKeywords').value = keywords.join(', ');
   return keywords;
 }
 
-async function saveKeywordsToAPI(){
-  const btn = qs('#btnSaveKeywords');
-  try{
-    setLoading(btn, true);
-    const keywords = qs('#taKeywords').value.split(',').map(s => s.trim()).filter(Boolean);
-    const res = await apiPost('saveKeywords', keywords);
-    if(!res.ok) throw new Error(res.message || 'Gagal simpan kata kunci');
-    alert('Kata kunci berhasil disimpan ke spreadsheet.');
-  }catch(err){
-    alert(err.message);
-  }finally{
-    setLoading(btn, false, 'Simpan Kata Kunci');
-  }
-}
-
 async function loadManualFromAPI(){
   const res = await apiGet('getManualData');
-  if(res.ok && Array.isArray(res.data)){
-    DATA_MANUAL = res.data.map(r => ({
-      id: r.id || '',
-      Tanggal: r.tanggal || '',
-      Wilayah: r.wilayah || 'Kalbar (Provinsi)',
-      Kategori: r.kategori || 'Sentimen Publik Online',
-      Peristiwa: r.peristiwa || '',
-      Akun: r.akun || '',
-      'Barang Bukti': r.barang_bukti || '—',
-      Tersangka: r.tersangka || '—',
-      Platform: r.platform || 'Medsos',
-      Modus: r.modus || '',
-      Urgensi: r.urgensi || 'Rendah',
-      Verifikasi: r.verifikasi || 'Belum Dicek',
-      Catatan: r.catatan || '',
-      Petugas: r.petugas || '',
-      Sumber: r.sumber || '',
-      _editable: true
-    }));
-    DATA_MANUAL.forEach(r => WILAYAH_ALL.add(r.Wilayah));
-  }else{
-    DATA_MANUAL = [];
-  }
+  if(!res || !res.ok) throw new Error(res?.message || 'getManualData gagal');
+
+  DATA_MANUAL = Array.isArray(res.data) ? res.data.map(r => ({
+    id: r.id || '',
+    Tanggal: r.tanggal || '',
+    Wilayah: r.wilayah || 'Kalbar (Provinsi)',
+    Kategori: r.kategori || 'Sentimen Publik Online',
+    Peristiwa: r.peristiwa || '',
+    Akun: r.akun || '',
+    'Barang Bukti': r.barang_bukti || '—',
+    Tersangka: r.tersangka || '—',
+    Platform: r.platform || 'Medsos',
+    Modus: r.modus || '',
+    Urgensi: r.urgensi || 'Rendah',
+    Verifikasi: r.verifikasi || 'Belum Dicek',
+    Catatan: r.catatan || '',
+    Petugas: r.petugas || '',
+    Sumber: r.sumber || '',
+    _editable: true
+  })) : [];
+
+  DATA_MANUAL.forEach(r => WILAYAH_ALL.add(r.Wilayah));
 }
 
 function getAllData(){ return [...DATA_RSS, ...DATA_MANUAL]; }
@@ -633,8 +587,8 @@ function filtered(){
     const c = !state.platform || d.Platform === state.platform;
     const v = !state.verifikasi || d.Verifikasi === state.verifikasi;
     const str = [
-      d.Wilayah, d.Kategori, d.Peristiwa, d.Akun, d['Barang Bukti'], d.Tersangka,
-      d.Platform, d.Modus, d.Urgensi, d.Verifikasi, d.Catatan, d.Petugas
+      d.Wilayah,d.Kategori,d.Peristiwa,d.Akun,d['Barang Bukti'],d.Tersangka,
+      d.Platform,d.Modus,d.Urgensi,d.Verifikasi,d.Catatan,d.Petugas
     ].join(' ').toLowerCase();
     const q = !state.query || str.includes(state.query);
     return a && b && c && v && q;
@@ -709,13 +663,9 @@ function renderCharts(rows){
 }
 
 function toCSV(rows){
-  const header = [
-    'Tanggal','Wilayah','Kategori','Peristiwa','Akun','Barang Bukti','Tersangka',
-    'Platform','Modus','Urgensi','Verifikasi','Catatan','Petugas','Sumber'
-  ];
+  const header = ['Tanggal','Wilayah','Kategori','Peristiwa','Akun','Barang Bukti','Tersangka','Platform','Modus','Urgensi','Verifikasi','Catatan','Petugas','Sumber'];
   const body = rows.map(r => [
-    r.Tanggal,r.Wilayah,r.Kategori,
-    r.Peristiwa,r.Akun,r['Barang Bukti'],r.Tersangka,
+    r.Tanggal,r.Wilayah,r.Kategori,r.Peristiwa,r.Akun,r['Barang Bukti'],r.Tersangka,
     r.Platform,r.Modus,r.Urgensi,r.Verifikasi,r.Catatan,r.Petugas,r.Sumber
   ].map(v => `"${String(v ?? '').replaceAll('"','""')}"`).join(','));
   return [header.join(','), ...body].join('\n');
@@ -771,9 +721,7 @@ async function saveManualRow(){
       sumber: isValidUrl(qs('#mSumber').value.trim()) ? qs('#mSumber').value.trim() : ''
     };
 
-    if(!payload.peristiwa){
-      throw new Error('Peristiwa wajib diisi.');
-    }
+    if(!payload.peristiwa) throw new Error('Peristiwa wajib diisi.');
 
     const action = payload.id ? 'updateManualData' : 'addManualData';
     const res = await apiPost(action, payload);
@@ -811,7 +759,7 @@ window.editRow = function(id){
   qs('#btnTambah').textContent = 'Update Data';
   qs('#btnBatalEdit').classList.remove('hidden');
   window.scrollTo({ top: 0, behavior: 'smooth' });
-}
+};
 
 window.deleteRow = async function(id){
   if(!confirm('Hapus data ini?')) return;
@@ -824,7 +772,7 @@ window.deleteRow = async function(id){
   }catch(err){
     alert(err.message);
   }
-}
+};
 
 async function clearManualDataAPI(){
   if(!confirm('Hapus SEMUA data manual di spreadsheet?')) return;
@@ -836,6 +784,36 @@ async function clearManualDataAPI(){
     alert('Semua data manual berhasil dihapus.');
   }catch(err){
     alert(err.message);
+  }
+}
+
+async function saveFeedsToAPI(){
+  const btn = qs('#btnSaveFeeds');
+  try{
+    setLoading(btn, true);
+    const feeds = qs('#taFeeds').value.split('\n').map(s => s.trim()).filter(Boolean);
+    const res = await apiPost('saveFeeds', feeds);
+    if(!res.ok) throw new Error(res.message || 'Gagal simpan feed');
+    alert('Feed berhasil disimpan ke spreadsheet.');
+  }catch(err){
+    alert(err.message);
+  }finally{
+    setLoading(btn, false, 'Simpan Feed');
+  }
+}
+
+async function saveKeywordsToAPI(){
+  const btn = qs('#btnSaveKeywords');
+  try{
+    setLoading(btn, true);
+    const keywords = qs('#taKeywords').value.split(',').map(s => s.trim()).filter(Boolean);
+    const res = await apiPost('saveKeywords', keywords);
+    if(!res.ok) throw new Error(res.message || 'Gagal simpan kata kunci');
+    alert('Kata kunci berhasil disimpan ke spreadsheet.');
+  }catch(err){
+    alert(err.message);
+  }finally{
+    setLoading(btn, false, 'Simpan Kata Kunci');
   }
 }
 
@@ -858,16 +836,38 @@ async function init(){
   resetForm();
   setStatus("Memuat data dashboard...");
 
+  let feeds = DEFAULT_FEEDS;
+  let keywords = DEFAULT_KEYWORDS;
+
   try{
-    const feeds = await loadFeedsFromAPI();
-    const keywords = await loadKeywordsFromAPI();
-    await loadManualFromAPI();
-    DATA_RSS = await crawlFeeds(feeds, keywords);
-    render();
+    feeds = await loadFeedsFromAPI();
   }catch(err){
-    console.error(err);
-    setStatus("Terjadi kendala saat memuat dashboard. Cek Apps Script atau feed RSS.", true);
+    qs('#taFeeds').value = feeds.join('\n');
+    setStatus(`Feed API gagal: ${err.message}`, true);
   }
+
+  try{
+    keywords = await loadKeywordsFromAPI();
+  }catch(err){
+    qs('#taKeywords').value = keywords.join(', ');
+    setStatus(`Keyword API gagal: ${err.message}`, true);
+  }
+
+  try{
+    await loadManualFromAPI();
+  }catch(err){
+    DATA_MANUAL = [];
+    setStatus(`Manual data API gagal: ${err.message}`, true);
+  }
+
+  try{
+    DATA_RSS = await crawlFeeds(feeds, keywords);
+  }catch(err){
+    DATA_RSS = [];
+    setStatus(`RSS gagal: ${err.message}`, true);
+  }
+
+  render();
 }
 
 qs('#btnSaveFeeds').onclick = saveFeedsToAPI;
@@ -881,15 +881,14 @@ qs('#btnReloadRSS').onclick = async function(){
   try{
     setLoading(btn, true);
     setStatus("Memuat ulang RSS...");
-    const feeds = await loadFeedsFromAPI();
-    const keywords = await loadKeywordsFromAPI();
+    const feeds = qs('#taFeeds').value.split('\n').map(s => s.trim()).filter(Boolean);
+    const keywords = qs('#taKeywords').value.split(',').map(s => s.trim()).filter(Boolean);
     DATA_RSS = [];
     render();
-    DATA_RSS = await crawlFeeds(feeds, keywords);
+    DATA_RSS = await crawlFeeds(feeds, keywords.length ? keywords : DEFAULT_KEYWORDS);
     render();
   }catch(err){
-    alert(err.message || 'Gagal muat ulang RSS');
-    setStatus("Gagal memuat ulang RSS.", true);
+    setStatus(`Gagal memuat ulang RSS: ${err.message}`, true);
   }finally{
     setLoading(btn, false, 'Muat Ulang RSS');
   }
